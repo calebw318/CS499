@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPE Data Collection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Stress Performance Evaluation</h1>
+        <h3>Login</h3>
+        <form id="login" method="post" action="/api/login">
+            <label for="username">Username:</label>
+            <textarea id="username" name="username" placeholder="first.last@uky.edu"></textarea>
+            <br>
+            <label for="password">Password:</label>
+            <textarea id="password" name="password" placeholder="password1234"></textarea>
+            <br>
+            <button type="submit">Submit</button>
+        </form>
+        <div id="login-error" class="error" role="alert" aria-live="polite" style="display:none"></div>
+    </div>
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>
