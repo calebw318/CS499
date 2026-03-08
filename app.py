@@ -1,7 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import os
+from datetime import datetime
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Temporary storage for submitted data (until database is connected)
+submitted_data = []
 
 
 @app.route('/')
@@ -23,6 +27,67 @@ def login():
 		return jsonify({'success': True, 'target': '/data.html', 'username': username})
 	else:
 		return jsonify({'success': False, 'target': '/enter_data.html', 'username': username})
+
+
+@app.route('/api/submit_data', methods=['POST'])
+def submit_data():
+	"""
+	Endpoint to receive research data (heart rate, test score, timestamp).
+	Expects JSON with: timestamp, heartRate, testScore
+	"""
+	try:
+		if request.is_json:
+			data = request.get_json()
+		else:
+			return jsonify({'success': False, 'message': 'Request must be JSON'})
+		
+		heartRate = data.get('heartRate')
+		testScore = data.get('testScore')
+		timestamp = data.get('timestamp')
+		
+		# Validate data
+		if heartRate is None or testScore is None or not timestamp:
+			return jsonify({'success': False, 'message': 'Missing required fields'})
+		
+		try:
+			heartRate = float(heartRate)
+			testScore = float(testScore)
+		except (ValueError, TypeError):
+			return jsonify({'success': False, 'message': 'Invalid data format'})
+		
+		# Store data in memory (replace with database call when ready)
+		data_entry = {
+			'timestamp': timestamp,
+			'heartRate': heartRate,
+			'testScore': testScore
+		}
+		submitted_data.append(data_entry)
+		
+		# TODO: Insert into database here
+		# db.insert_data(data_entry)
+		
+		return jsonify({'success': True, 'message': 'Data submitted successfully'})
+	
+	except Exception as e:
+		return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/get_data', methods=['GET'])
+def get_data():
+	"""
+	Endpoint to retrieve all submitted research data.
+	Returns JSON array of data entries.
+	"""
+	try:
+		# For now, return data from memory
+		# TODO: Replace with database query when ready
+		# data = db.query_all_data()
+		
+		# Return submitted data in reverse order (newest first)
+		return jsonify({'success': True, 'data': submitted_data[::-1]})
+	
+	except Exception as e:
+		return jsonify({'success': False, 'message': str(e), 'data': []})
 
 
 @app.route('/data.html')

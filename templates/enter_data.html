@@ -5,12 +5,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Enter Data</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
+      color: #333;
+    }
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    input[type="number"]:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: #2b6cb0;
+      box-shadow: 0 0 4px rgba(43, 108, 176, 0.3);
+    }
+    .timestamp-display {
+      padding: 8px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #666;
+    }
+    .success {
+      margin-top: 12px;
+      padding: 10px;
+      background: #e6ffe6;
+      border: 1px solid #b3ffb3;
+      color: #080;
+      border-radius: 4px;
+    }
+    .error {
+      margin-top: 12px;
+      padding: 10px;
+      background: #ffe6e6;
+      border: 1px solid #ffb3b3;
+      color: #800;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Enter Data</h1>
-    <p>Please enter your data on this page.</p>
-    <a href="/">Back to login</a>
+    <h1>Enter Research Data</h1>
+    <p>Please enter your heart rate and test scores below.</p>
+    
+    <form id="dataForm">
+      <div class="form-group">
+        <label for="heartRate">Heart Rate (BPM):</label>
+        <input type="number" id="heartRate" name="heartRate" min="0" max="300" step="1" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="testScore">Test Score:</label>
+        <input type="number" id="testScore" name="testScore" min="0" max="100" step="0.1" required>
+      </div>
+      
+      <div class="timestamp-display">
+        <strong>Timestamp:</strong> <span id="timestamp"></span>
+      </div>
+      
+      <button type="submit">Submit Data</button>
+      <button type="reset">Clear</button>
+    </form>
+    
+    <div id="message"></div>
+    <a href="/" style="margin-top: 16px; display: inline-block;">Back to login</a>
   </div>
+
+  <script>
+    // Update timestamp display when page loads and every second
+    function updateTimestamp() {
+      const now = new Date();
+      document.getElementById('timestamp').textContent = now.toLocaleString();
+    }
+    
+    updateTimestamp();
+    setInterval(updateTimestamp, 1000);
+    
+    // Handle form submission
+    document.getElementById('dataForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const heartRate = document.getElementById('heartRate').value;
+      const testScore = document.getElementById('testScore').value;
+      const timestamp = new Date().toISOString();
+      
+      const data = {
+        timestamp: timestamp,
+        heartRate: parseFloat(heartRate),
+        testScore: parseFloat(testScore)
+      };
+      
+      try {
+        const response = await fetch('/api/submit_data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        const messageDiv = document.getElementById('message');
+        
+        if (result.success) {
+          messageDiv.innerHTML = '<div class="success">Data submitted successfully!</div>';
+          document.getElementById('dataForm').reset();
+          updateTimestamp();
+          setTimeout(() => {
+            messageDiv.innerHTML = '';
+          }, 3000);
+        } else {
+          messageDiv.innerHTML = '<div class="error">Error: ' + (result.message || 'Failed to submit data') + '</div>';
+        }
+      } catch (error) {
+        document.getElementById('message').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+      }
+    });
+  </script>
 </body>
 </html>
