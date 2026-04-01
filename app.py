@@ -4,6 +4,7 @@ from supabase import create_client, Client
 from types import SimpleNamespace
 import os
 from datetime import datetime
+from audit_log import log_login, log_logout
 
 ADMIN_EMAIL = 'jenahinds@uky.edu'
 load_dotenv()
@@ -38,7 +39,7 @@ def get_current_user():
 
 @app.route('/')
 def index():
-	return render_template('index.html')
+    return render_template('index.html')
 
 
 @app.route('/api/login', methods=['POST'])
@@ -60,8 +61,10 @@ def login():
         session_info = getattr(response, 'session', None)
 
         if not user or not session_info:
+            log_login(email, success=False)
             return jsonify({'success': False, 'message': 'Login failed'})
 
+        log_login(email, request, success=True)
         target = '/data.html' if user.email == ADMIN_EMAIL else '/enter_data.html'
 
         session.permanent = True
@@ -76,6 +79,7 @@ def login():
         })
 
     except Exception as e:
+        log_login(email, request, success=False)
         return jsonify({'success': False, 'message': str(e)})
 
 
@@ -125,12 +129,16 @@ def signup():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
+    username = session.get('user_email', 'unknown')
+    log_logout(username, request)
     session.clear()
     return jsonify({'success': True})
 
 
 @app.route('/logout')
 def logout_page():
+    username = session.get('user_email', 'unknown')
+    log_logout(username, request)
     session.clear()
     return redirect(url_for('index'))
 
@@ -146,85 +154,85 @@ def current_user():
 
 @app.route('/api/submit_data', methods=['POST'])
 def submit_data():
-	if request.is_json:
-		data = request.get_json()
-	else:
-		return jsonify({'success': False, 'message': 'Request must be JSON'})
+    if request.is_json:
+        data = request.get_json()
+    else:
+        return jsonify({'success': False, 'message': 'Request must be JSON'})
 
-	user = get_current_user()
-	if not user:
-		return jsonify({'success': False, 'message': 'Authentication required'}), 401
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
 
-	baselineHeartRate = data.get('baselineHeartRate')
-	newHeartRate = data.get('newHeartRate')
-	testScore = data.get('testScore')
-	timestamp = data.get('timestamp') or datetime.utcnow().isoformat()
+    baselineHeartRate = data.get('baselineHeartRate')
+    newHeartRate = data.get('newHeartRate')
+    testScore = data.get('testScore')
+    timestamp = data.get('timestamp') or datetime.utcnow().isoformat()
 
-	if baselineHeartRate is None and newHeartRate is None and testScore is None:
-		return jsonify({'success': False, 'message': 'At least one numeric field is required'})
+    if baselineHeartRate is None and newHeartRate is None and testScore is None:
+        return jsonify({'success': False, 'message': 'At least one numeric field is required'})
 
-	payload = {
-		'user_email': user.email,
-		'timestamp': timestamp
-	}
+    payload = {
+        'user_email': user.email,
+        'timestamp': timestamp
+    }
 
-	try:
-		if baselineHeartRate is not None:
-			payload['baseline_heart_rate'] = float(baselineHeartRate)
-		if newHeartRate is not None:
-			payload['new_heart_rate'] = float(newHeartRate)
-		if testScore is not None:
-			payload['test_score'] = float(testScore)
-	except (ValueError, TypeError):
-		return jsonify({'success': False, 'message': 'Invalid numeric values'})
+    try:
+        if baselineHeartRate is not None:
+            payload['baseline_heart_rate'] = float(baselineHeartRate)
+        if newHeartRate is not None:
+            payload['new_heart_rate'] = float(newHeartRate)
+        if testScore is not None:
+            payload['test_score'] = float(testScore)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'Invalid numeric values'})
 
-	# Use existing row for this user if it exists, otherwise insert new row.
-	try:
-		existing = supabase.table('research_data').select('*').eq('user_email', user.email).limit(1).execute()
-		row = existing.data[0] if existing.data else None
+    # Use existing row for this user if it exists, otherwise insert new row.
+    try:
+        existing = supabase.table('research_data').select('*').eq('user_email', user.email).limit(1).execute()
+        row = existing.data[0] if existing.data else None
 
-		if row:
-			supabase.table('research_data').update(payload).eq('id', row['id']).execute()
-		else:
-			supabase.table('research_data').insert(payload).execute()
+        if row:
+            supabase.table('research_data').update(payload).eq('id', row['id']).execute()
+        else:
+            supabase.table('research_data').insert(payload).execute()
 
-		return jsonify({'success': True, 'message': 'Data submitted successfully'})
-	except Exception as e:
-		return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': True, 'message': 'Data submitted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 
 @app.route('/api/get_data', methods=['GET'])
 def get_data():
-	user = get_current_user()
+    user = get_current_user()
 
-	if not user:
-		return jsonify({'success': False, 'message': 'Authentication required', 'data': []}), 401
+    if not user:
+        return jsonify({'success': False, 'message': 'Authentication required', 'data': []}), 401
 
-	try:
-		if user.email == ADMIN_EMAIL:
-			response = supabase.table('research_data').select('*').execute()
-		else:
-			response = supabase.table('research_data').select('*').eq('user_email', user.email).execute()
+    try:
+        if user.email == ADMIN_EMAIL:
+            response = supabase.table('research_data').select('*').execute()
+        else:
+            response = supabase.table('research_data').select('*').eq('user_email', user.email).execute()
 
-		return jsonify({'success': True, 'data': response.data or []})
-	except Exception as e:
-		return jsonify({'success': False, 'message': str(e), 'data': []})
+        return jsonify({'success': True, 'data': response.data or []})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e), 'data': []})
 
 
 @app.route('/data.html')
 def data_page():
-	if not get_current_user():
-		return redirect(url_for('index'))
-	return render_template('data.html')
+    if not get_current_user():
+        return redirect(url_for('index'))
+    return render_template('data.html')
 
 
 @app.route('/enter_data.html')
 def enter_data_page():
-	if not get_current_user():
-		return redirect(url_for('index'))
-	return render_template('enter_data.html')
+    if not get_current_user():
+        return redirect(url_for('index'))
+    return render_template('enter_data.html')
 
 
 if __name__ == '__main__':
-	port = int(os.environ.get('PORT', 5000))
-	app.run(host='127.0.0.1', port=port, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='127.0.0.1', port=port, debug=True)
