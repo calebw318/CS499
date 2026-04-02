@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from types import SimpleNamespace
 import os
+import uuid
 from datetime import datetime
 
 ADMIN_EMAIL = 'jenahinds@uky.edu'
@@ -164,6 +165,7 @@ def submit_data():
 		return jsonify({'success': False, 'message': 'At least one numeric field is required'})
 
 	payload = {
+        'id': str(uuid.uuid4()),
 		'user_email': user.email,
 		'timestamp': timestamp
 	}
@@ -178,16 +180,8 @@ def submit_data():
 	except (ValueError, TypeError):
 		return jsonify({'success': False, 'message': 'Invalid numeric values'})
 
-	# Use existing row for this user if it exists, otherwise insert new row.
 	try:
-		existing = supabase.table('research_data').select('*').eq('user_email', user.email).limit(1).execute()
-		row = existing.data[0] if existing.data else None
-
-		if row:
-			supabase.table('research_data').update(payload).eq('id', row['id']).execute()
-		else:
-			supabase.table('research_data').insert(payload).execute()
-
+		supabase.table('research_data').insert(payload).execute()
 		return jsonify({'success': True, 'message': 'Data submitted successfully'})
 	except Exception as e:
 		return jsonify({'success': False, 'message': str(e)})
