@@ -11,26 +11,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // POST credentials to server for validation
     fetch('/api/login', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username, password: password })
     })
       .then(res => res.json())
       .then(data => {
         if (data && data.success) {
-          window.location.href = data.target || '/data.html';
+          window.location.href = data.target;
         } else {
-          window.location.href = data.target || '/enter_data.html';
-          
-          // show inline error; still provide a link to enter_data.html
-          //const msg = (data && data.message) ? data.message : 'Login failed';
-         // errorDiv.textContent = msg;
-          //errorDiv.style.display = 'block';
-          // optionally show a link to enter_data page after a short delay
-          //const link = document.createElement('a');
-          //link.href = data && data.target ? data.target : '/enter_data.html';
-          //link.textContent = ' Proceed to data entry';
-          //link.style.marginLeft = '8px';
-          //errorDiv.appendChild(link);
+          const message = data && data.message ? data.message : 'Login failed';
+          errorDiv.textContent = message;
+          errorDiv.style.display = 'block';
         }
       })
       .catch(err => {

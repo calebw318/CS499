@@ -65,7 +65,8 @@
         <thead>
           <tr>
             <th>Timestamp</th>
-            <th>Heart Rate (BPM)</th>
+            <th>Baseline Heart Rate</th>
+            <th>New Heart Rate</th>
             <th>Test Score</th>
           </tr>
         </thead>
@@ -80,6 +81,7 @@
     <div class="button-group">
       <a href="/enter_data.html">Enter More Data</a>
       <button onclick="refreshData()">Refresh</button>
+      <button type="button" onclick="logout()">Logout</button>
       <a href="/">Back to login</a>
     </div>
   </div>
@@ -88,7 +90,7 @@
     // Fetch and display data
     async function loadData() {
       try {
-        const response = await fetch('/api/get_data');
+        const response = await fetch('/api/get_data', { credentials: 'same-origin' });
         const result = await response.json();
         
         const loadingDiv = document.getElementById('loading');
@@ -111,8 +113,9 @@
             const timestamp = new Date(item.timestamp).toLocaleString();
             row.innerHTML = `
               <td>${timestamp}</td>
-              <td>${item.heartRate}</td>
-              <td>${item.testScore}</td>
+              <td>${item.baseline_heart_rate || 'N/A'}</td>
+              <td>${item.new_heart_rate || 'N/A'}</td>
+              <td>${item.test_score || 'N/A'}</td>
             `;
             dataBody.appendChild(row);
           });
@@ -130,6 +133,11 @@
       document.getElementById('dataContainer').style.display = 'none';
       document.getElementById('emptyState').style.display = 'none';
       loadData();
+    }
+
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/';
     }
     
     // Load data when page loads

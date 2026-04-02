@@ -12,14 +12,15 @@
         <h1>Stress Performance Evaluation</h1>
         <h3>Login</h3>
         <form id="login" method="post" action="/api/login">
-            <label for="username">Username:</label>
-            <textarea id="username" name="username" placeholder="first.last@uky.edu"></textarea>
+            <label for="username">Email:</label>
+            <input id="username" name="username" type="email" placeholder="first.last@uky.edu" required>
             <br>
             <label for="password">Password:</label>
-            <textarea id="password" name="password" placeholder="password1234"></textarea>
+            <input id="password" name="password" type="password" placeholder="password1234" required>
             <br>
             <button type="submit">Submit</button>
         </form>
+        <p style="margin-top: 16px;">Don't have an account? <a href="/signup">Sign up</a></p>
         <div id="login-error" class="error" role="alert" aria-live="polite" style="display:none"></div>
     </div>
     <script src="{{ url_for('static', filename='js/login.js') }}"></script>
