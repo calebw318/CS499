@@ -68,6 +68,7 @@
             <th>Baseline Heart Rate</th>
             <th>New Heart Rate</th>
             <th>Test Score</th>
+            <th>SPE</th>
           </tr>
         </thead>
         <tbody id="dataBody">
@@ -111,11 +112,22 @@
           result.data.forEach(item => {
             const row = document.createElement('tr');
             const timestamp = new Date(item.timestamp).toLocaleString();
+            
+            // Calculate SPE: test_score / (baseline_heart_rate / new_heart_rate * 100)
+            let speValue = 'N/A';
+            if (item.baseline_heart_rate && item.new_heart_rate && item.test_score) {
+              const denominator = (item.baseline_heart_rate / item.new_heart_rate) * 100;
+              if (denominator !== 0) {
+                speValue = (item.test_score / denominator).toFixed(2);
+              }
+            }
+            
             row.innerHTML = `
               <td>${timestamp}</td>
               <td>${item.baseline_heart_rate || 'N/A'}</td>
               <td>${item.new_heart_rate || 'N/A'}</td>
               <td>${item.test_score || 'N/A'}</td>
+              <td>${speValue}</td>
             `;
             dataBody.appendChild(row);
           });
