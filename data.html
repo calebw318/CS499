@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th {
+      background: #2b6cb0;
+      color: #fff;
+      padding: 12px;
+      text-align: left;
+      font-weight: bold;
+    }
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    tr:hover {
+      background: #f5f5f5;
+    }
+    .button-group {
+      margin-top: 20px;
+    }
+    .button-group a, .button-group button {
+      margin-right: 10px;
+      padding: 8px 14px;
+      background: #2b6cb0;
+      color: #fff;
+      text-decoration: none;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .button-group a:hover, .button-group button:hover {
+      background: #234f86;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Research Data</h1>
+    <p>View all submitted research data below.</p>
+    
+    <div id="loading" class="loading">Loading data...</div>
+    <div id="dataContainer" style="display: none;">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Baseline Heart Rate</th>
+            <th>New Heart Rate</th>
+            <th>Test Score</th>
+            <th>SPE</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+        </tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <p>No data available yet. <a href="/enter_data.html">Enter some data</a> to get started.</p>
+    </div>
+    
+    <div class="button-group">
+      <a href="/enter_data.html">Enter More Data</a>
+      <button onclick="refreshData()">Refresh</button>
+      <button type="button" onclick="logout()">Logout</button>
+      <!-- <a href="/">Back to login</a> -->
+    </div>
+  </div>
+
+  <script>
+    // Fetch and display data
+    async function loadData() {
+      try {
+        const response = await fetch('/api/get_data', { credentials: 'same-origin' });
+        const result = await response.json();
+        
+        const loadingDiv = document.getElementById('loading');
+        const dataContainer = document.getElementById('dataContainer');
+        const emptyState = document.getElementById('emptyState');
+        const dataBody = document.getElementById('dataBody');
+        
+        loadingDiv.style.display = 'none';
+        
+        if (result.data && result.data.length > 0) {
+          dataContainer.style.display = 'block';
+          emptyState.style.display = 'none';
+          
+          // Clear existing rows
+          dataBody.innerHTML = '';
+          
+          // Add data rows
+          result.data.forEach(item => {
+            const row = document.createElement('tr');
+            const timestamp = new Date(item.timestamp).toLocaleString();
+            
+            // Calculate SPE: test_score / (baseline_heart_rate / new_heart_rate * 100)
+            let speValue = 'N/A';
+            if (item.baseline_heart_rate && item.new_heart_rate && item.test_score) {
+              const denominator = (item.baseline_heart_rate / item.new_heart_rate) * 100;
+              if (denominator !== 0) {
+                speValue = (item.test_score / denominator).toFixed(2);
+              }
+            }
+            
+            row.innerHTML = `
+              <td>${timestamp}</td>
+              <td>${item.baseline_heart_rate || 'N/A'}</td>
+              <td>${item.new_heart_rate || 'N/A'}</td>
+              <td>${item.test_score || 'N/A'}</td>
+              <td>${speValue}</td>
+            `;
+            dataBody.appendChild(row);
+          });
+        } else {
+          dataContainer.style.display = 'none';
+          emptyState.style.display = 'block';
+        }
+      } catch (error) {
+        document.getElementById('loading').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
+      }
+    }
+    
+    function refreshData() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('dataContainer').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+      loadData();
+    }
+
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/';
+    }
+    
+    // Load data when page loads
+    loadData();
+  </script>
+</body>
+</html>
